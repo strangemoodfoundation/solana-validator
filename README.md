@@ -18,10 +18,23 @@ If you have the budget for it, run a `c5d.metal`
 
 With a `c5d.metal`, run the following:
 
-- `sudo mdadm --create --verbose /dev/md0 --level=0 --raid-devices=4 /dev/nvme0n1 /dev/nvme1n1 /dev/nvme3n1 /dev/nvme4n1`
-- `sudo mkfs.ext4 /dev/md0`
-- Edit `/etc/fstab` by adding `/dev/md0 /mnt/solana ext4 rw,defaults 0 0`
-- `sudo mount /dev/md0`
+- _Create the RAID_: `sudo mdadm --create --verbose /dev/md0 --level=0 --raid-devices=4 /dev/nvme0n1 /dev/nvme1n1 /dev/nvme3n1 /dev/nvme4n1`
+
+- Ensure the raid is assembled on reboot: `sudo mdadm --detail --scan | sudo tee -a /etc/mdadm/mdadm.conf`
+
+- update the initramfs, or initial RAM file system, so that the array will be available during the early boot process: `sudo update-initramfs -u`
+
+- _Format the partition and create a filesystem:_ `sudo mkfs.ext4 /dev/md0`
+- `sudo mkdir /mnt/solana`
+
+**_UPDATE: do NOT touch the fstab, it causes rebots to fail. that is all. figuring out how to *not* have this fail_**
+
+- Edit `/etc/fstab` by adding `/dev/md0 /mnt/solana ext4 async,auto,noexec,rw,user 0 0`
+
+nofail is important because on system boot occurs before devices are mounted and it just fails. This means, however, that this likely will not run on reboot by itself. run `mount -a` after a reboot.
+https://askubuntu.com/questions/14365/mount-an-external-drive-at-boot-time-only-if-it-is-plugged-in
+
+- Test it with `sudo mount -a`
 
 _If you are not using a `c5d.metal` here's a good guide on what RAID is and how to configure it: [RAID on AWS](https://bravetheheat.medium.com/configuring-raid-on-aws-ec2-214610e0983d)_
 
@@ -30,7 +43,7 @@ _If you are not using a `c5d.metal` here's a good guide on what RAID is and how 
 ### 4. Run this setup script:
 
 ```
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/strangemoodfoundation/solana-validator/main/install_validator.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/strangemoodfoundation/solana-validator/main/install_validator.sh)" --version "1.0.3"
 ```
 
 ### 5. Update the withdraw authority
